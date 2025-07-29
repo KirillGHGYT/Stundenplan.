@@ -1,160 +1,73 @@
-import pygame
-import random
-import sys
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Klickspiel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #222;
+      color: white;
+      margin-top: 50px;
+    }
 
-# Fenstergröße
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+    #gameArea {
+      width: 100%;
+      height: 400px;
+      position: relative;
+      background-color: #444;
+      border: 2px solid #fff;
+    }
 
-# Farben
-WHITE = (255, 255, 255)
-BLUE = (50, 50, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-BLACK = (0, 0, 0)
+    #target {
+      width: 60px;
+      height: 60px;
+      background-color: red;
+      position: absolute;
+      border-radius: 50%;
+      cursor: pointer;
+    }
 
-# Konstanten
-GRAVITY = 0.5
-JUMP_STRENGTH = -10
+    #score {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
 
-# Plattformen
-platforms = [
-    pygame.Rect(100, 500, 200, 20),
-    pygame.Rect(400, 400, 200, 20),
-    pygame.Rect(200, 300, 150, 20),
-    pygame.Rect(600, 200, 150, 20)
-]
+  <h1>🎯 Triff den Button!</h1>
+  <div id="score">Punkte: 0</div>
+  <div id="gameArea">
+    <div id="target"></div>
+  </div>
 
-# Gegner-Klasse
-class Enemy:
-    def __init__(self, x, y, width=40, height=40):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.direction = 1
-        self.speed = 2
+  <script>
+    const target = document.getElementById("target");
+    const gameArea = document.getElementById("gameArea");
+    const scoreDisplay = document.getElementById("score");
+    let score = 0;
 
-    def move(self):
-        self.rect.x += self.direction * self.speed
-        # Begrenzung
-        if self.rect.left < 0 or self.rect.right > SCREEN_WIDTH:
-            self.direction *= -1
+    function moveTarget() {
+      const maxX = gameArea.clientWidth - target.clientWidth;
+      const maxY = gameArea.clientHeight - target.clientHeight;
+      const randomX = Math.random() * maxX;
+      const randomY = Math.random() * maxY;
 
-    def draw(self, screen):
-        pygame.draw.rect(screen, RED, self.rect)
+      target.style.left = randomX + "px";
+      target.style.top = randomY + "px";
+    }
 
-# Punkte-Klasse
-class Point:
-    def __init__(self, x, y, radius=10):
-        self.x = x
-        self.y = y
-        self.radius = radius
-        self.collected = False
+    target.addEventListener("click", () => {
+      score++;
+      scoreDisplay.textContent = "Punkte: " + score;
+      moveTarget();
+    });
 
-    def draw(self, screen):
-        if not self.collected:
-            pygame.draw.circle(screen, YELLOW, (self.x, self.y), self.radius)
+    // Ziel anfangs positionieren
+    moveTarget();
+  </script>
 
-    def collide(self, rect):
-        return not self.collected and pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2).colliderect(rect)
-
-# Spieler-Klasse
-class Player:
-    def __init__(self):
-        self.rect = pygame.Rect(100, 100, 50, 50)
-        self.vel_y = 0
-        self.on_ground = False
-        self.score = 0
-
-    def move(self, keys):
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.rect.x -= 5
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.rect.x += 5
-        if keys[pygame.K_SPACE] and self.on_ground:
-            self.vel_y = JUMP_STRENGTH
-            self.on_ground = False
-
-    def apply_gravity(self):
-        self.vel_y += GRAVITY
-        self.rect.y += self.vel_y
-
-    def check_collisions(self, platforms):
-        self.on_ground = False
-        for platform in platforms:
-            if self.rect.colliderect(platform):
-                if self.vel_y > 0:
-                    self.rect.bottom = platform.top
-                    self.vel_y = 0
-                    self.on_ground = True
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, BLUE, self.rect)
-
-def draw_text(screen, text, size, x, y, color=BLACK):
-    font = pygame.font.SysFont("Arial", size)
-    text_surface = font.render(text, True, color)
-    screen.blit(text_surface, (x, y))
-
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Platformer mit Feinden & Punkten")
-    clock = pygame.time.Clock()
-
-    player = Player()
-    enemies = [Enemy(400, 360), Enemy(600, 160)]
-    points = [Point(150, 470), Point(450, 370), Point(250, 270), Point(650, 170)]
-
-    running = True
-    game_over = False
-
-    while running:
-        clock.tick(60)
-        screen.fill(WHITE)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-        if not game_over:
-            keys = pygame.key.get_pressed()
-            player.move(keys)
-            player.apply_gravity()
-            player.check_collisions(platforms)
-
-            # Punkte sammeln
-            for point in points:
-                if point.collide(player.rect):
-                    point.collected = True
-                    player.score += 1
-
-            # Feind-Bewegung
-            for enemy in enemies:
-                enemy.move()
-                if player.rect.colliderect(enemy.rect):
-                    game_over = True
-
-        # Zeichnen
-        player.draw(screen)
-
-        for platform in platforms:
-            pygame.draw.rect(screen, GREEN, platform)
-
-        for enemy in enemies:
-            enemy.draw(screen)
-
-        for point in points:
-            point.draw(screen)
-
-        draw_text(screen, f"Punkte: {player.score}", 30, 10, 10)
-
-        if game_over:
-            draw_text(screen, "Game Over!", 60, SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 30, RED)
-
-        pygame.display.flip()
-
-    pygame.quit()
-    sys.exit()
-
-if __name__ == "__main__":
-    main()
+</body>
+</html>
